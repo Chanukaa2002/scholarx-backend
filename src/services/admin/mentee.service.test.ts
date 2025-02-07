@@ -1,7 +1,7 @@
 import { dataSource } from '../../configs/dbConfig'
 import type Mentee from '../../entities/mentee.entity'
 import { MenteeApplicationStatus } from '../../enums'
-import { getAllMenteeEmailsService, getAllMentees } from './mentee.service'
+import { getAllMenteeEmailsService, getAllMentees,getMenteesByStatus } from './mentee.service'
 
 jest.mock('../../configs/dbConfig', () => ({
   dataSource: {
@@ -191,5 +191,93 @@ describe('Mentee Service', () => {
         getAllMentees({ status, pageNumber: 1, pageSize: 2 })
       ).rejects.toThrowError('Error getting mentees')
     })
+  })
+})
+
+
+
+describe('Mentee Service - getMenteesByStatus', () => {
+  it('should get all mentees by status successfully', async () => {
+    const status: MenteeApplicationStatus = MenteeApplicationStatus.APPROVED
+
+    const mockMentees = [
+      {
+        uuid: 'mock-uuid-1',
+        state: status,
+        profile: {
+          uuid: 'profile-uuid-1',
+          primary_email: 'mentee1@example.com'
+        },
+        mentor: {
+          uuid: 'mentor-uuid-1',
+          profile: {
+            uuid: 'mentor-profile-uuid-1',
+            primary_email: 'mentor1@example.com'
+          }
+        }
+      },
+      {
+        uuid: 'mock-uuid-2',
+        state: status,
+        profile: {
+          uuid: 'profile-uuid-2',
+          primary_email: 'mentee2@example.com'
+        },
+        mentor: {
+          uuid: 'mentor-uuid-2',
+          profile: {
+            uuid: 'mentor-profile-uuid-2',
+            primary_email: 'mentor2@example.com'
+          }
+        }
+      }
+    ] as Mentee[]
+
+    const mockMenteeRepository = {
+      find: jest.fn().mockResolvedValue(mockMentees)
+    }
+
+    ;(dataSource.getRepository as jest.Mock).mockReturnValueOnce(
+      mockMenteeRepository
+    )
+
+    const result = await getMenteesByStatus(status)
+
+    expect(result.statusCode).toBe(200)
+    expect(result.mentees).toEqual(mockMentees)
+    expect(result.message).toBe('Mentees found with the specified status')
+  })
+
+  it('should handle no mentees found with the specified status', async () => {
+    const status: MenteeApplicationStatus = MenteeApplicationStatus.PENDING
+
+    const mockMenteeRepository = {
+      find: jest.fn().mockResolvedValue([])
+    }
+
+    ;(dataSource.getRepository as jest.Mock).mockReturnValueOnce(
+      mockMenteeRepository
+    )
+
+    const result = await getMenteesByStatus(status)
+
+    expect(result.statusCode).toBe(404)
+    expect(result.message).toBe('No mentees found with the specified status')
+  })
+
+  it('should handle error during mentees retrieval', async () => {
+    const status: MenteeApplicationStatus = MenteeApplicationStatus.APPROVED
+
+    const mockMenteeRepository = {
+      find: jest.fn().mockRejectedValue(new Error('Test repository error'))
+    }
+
+    ;(dataSource.getRepository as jest.Mock).mockReturnValueOnce(
+      mockMenteeRepository
+    )
+
+    await expect(getMenteesByStatus(status)).rejects.toThrowError(
+      'Error fetching mentees by status'
+    )
   })
 })

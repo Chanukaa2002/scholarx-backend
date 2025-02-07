@@ -10,7 +10,8 @@ import {
   getAllMenteeEmailsService,
   getAllMentees,
   getMentee,
-  updateStatus
+  updateStatus,
+  getMenteesByStatus
 } from '../../services/admin/mentee.service'
 import type { ApiResponse, PaginatedApiResponse } from '../../types'
 
@@ -144,5 +145,48 @@ export const getAllMenteeEmails = async (
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: err || 'Internal Server Error' })
+  }
+}
+
+export const getAllMenteesByStatus = async (
+  req: Request,
+  res: Response
+): Promise<ApiResponse<Mentee[]>> => {
+  try {
+    const status = req.query.status as MenteeApplicationStatus
+    const user = req.user as Profile
+
+    if (user.type !== ProfileTypes.ADMIN) {
+      return res.status(403).json({ message: 'Only Admins are allowed' })
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: 'Invalid or missing status parameter' })
+    }
+
+    const validStatuses = Object.values(MenteeApplicationStatus);
+    const lowerCaseStatus = status.toLowerCase() as MenteeApplicationStatus;
+
+    if (!validStatuses.includes(lowerCaseStatus)) {
+      return res.status(400).json({ 
+        message: 'Invalid status provided' 
+      });
+    }
+
+    const { mentees, statusCode, message } = await getMenteesByStatus(status.toLowerCase() as MenteeApplicationStatus)
+
+    return res.status(statusCode).json({
+      mentees,
+      message
+    })
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error('Error fetching mentees by status:', err)
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: err.message 
+      })
+    }
+    return res.status(500).json({ error: 'Unexpected server error' })
   }
 }

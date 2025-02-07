@@ -280,3 +280,37 @@ export const revoke = async (
     throw new Error('Error updating mentee status')
   }
 }
+
+
+export const getMenteesByStatus = async (
+  status: MenteeApplicationStatus
+): Promise<{
+  statusCode: number
+  mentees?: Mentee[]
+  message: string
+}> => {
+  try {
+    const menteeRepository = dataSource.getRepository(Mentee)
+
+    const mentees = await menteeRepository.find({
+      where: { state: status },
+      relations: ['profile', 'mentor']
+    })
+
+    if (mentees.length === 0) {
+      return {
+        statusCode: 404,
+        message: 'No mentees found with the specified status'
+      }
+    }
+
+    return {
+      statusCode: 200,
+      mentees,
+      message: 'Mentees found with the specified status'
+    }
+  } catch (err) {
+    console.error('Error fetching mentees by status:', err)
+    throw new Error('Error fetching mentees by status')
+  }
+}

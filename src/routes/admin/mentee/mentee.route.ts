@@ -3,7 +3,8 @@ import {
   getAllMenteeEmails,
   getMenteeDetails,
   getMentees,
-  updateMenteeStatus
+  updateMenteeStatus,
+  getAllMenteesByStatus
 } from '../../../controllers/admin/mentee.controller'
 import { requireAuth } from '../../../controllers/auth.controller'
 import {
@@ -41,5 +42,7 @@ menteeRouter.put(
   [requireAuth, requestBodyValidator(updateMenteeStatusSchema)],
   updateMenteeStatus
 )
+
+menteeRouter.get('/',requireAuth,getAllMenteesByStatus)
 
 export default menteeRouter
